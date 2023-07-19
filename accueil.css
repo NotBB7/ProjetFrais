@@ -1,0 +1,36 @@
+body {
+    background-color: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding-top: 150px;
+  }
+  
+  .container {
+    margin: 0 auto;
+    max-width: 500px;
+  }
+  
+  h1 {
+    font-size: 32px;
+  }
+  
+  .buttons {
+    margin-top: 30px;
+  }
+  
+  a {
+    display: inline-block;
+    background-color: #333;
+    color: #fff;
+    font-size: 18px;
+    text-decoration: none;
+    padding: 10px 20px;
+    margin-right: 10px;
+    border-radius: 5px;
+  }
+  
+  a:hover {
+    background-color: #555;
+  }
+  
