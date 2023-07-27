@@ -86,6 +86,7 @@
     } else {
       // Vérification si l'email existe déjà dans la base de données
       $query = "SELECT * FROM employees WHERE emp_mail = '$email'";
+      $mot_de_passe = password_hash($mot_de_passe, PASSWORD_DEFAULT);
       $result = $conn->query($query);
       if ($result->num_rows > 0) {
         echo "Cet email est déjà utilisé.";
@@ -138,50 +139,57 @@
       </form>
     </div>
 
-    <?php
+<?php
+// Démarrez la session pour suivre l'utilisateur
+session_start();
+
+// Vérifier si le formulaire a été soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Vos identifiants de connexion MySQL
     $servername = "localhost";
     $username = "root";
     $password = "1234";
     $dbname = "projeta";
 
-    // Vérifier si le formulaire a été soumis
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-      // Récupérer les valeurs du formulaire
-      $inputemail = $_POST["email"];
-      $inputpassword = $_POST["mot_de_passe"];
+    // Récupérer les valeurs du formulaire
+    $inputemail = $_POST["email"];
+    $inputpassword = $_POST["mot_de_passe"];
 
-      // Créer une connexion à la base de données
-      $conn = new mysqli($servername, $username, $password, $dbname);
+    // Créer une connexion à la base de données
+    $conn = new mysqli($servername, $username, $password, $dbname);
 
-      // Vérifier s'il y a une erreur de connexion
-      if ($conn->connect_error) {
+    // Vérifier s'il y a une erreur de connexion
+    if ($conn->connect_error) {
         die("Erreur de connexion à la base de données : " . $conn->connect_error);
-      }
+    }
 
-      // Préparer la requête pour vérifier les identifiants
-      $stmt = $conn->prepare("SELECT * FROM employees WHERE emp_mail = ? AND emp_password = ?");
-      $stmt->bind_param("ss", $inputemail, $inputpassword);
-      $stmt->execute();
+    // Préparer la requête pour vérifier les identifiants
+    $stmt = $conn->prepare("SELECT emp_id FROM employees WHERE emp_mail = ? AND emp_password = ?");
+    $stmt->bind_param("ss", $inputemail, $inputpassword);
+    $stmt->execute();
 
-      // Récupérer les résultats de la requête
-      $result = $stmt->get_result();
+    // Récupérer les résultats de la requête
+    $result = $stmt->get_result();
 
-      // Vérifier s'il y a une correspondance dans la base de données
-      if ($result->num_rows == 1) {
-        // Identifiants corrects, rediriger vers la page d'accueil
-        header("Location: accueil.php");
+    // Vérifier s'il y a une correspondance dans la base de données
+    if ($result->num_rows == 1) {
+        // Identifiants corrects, démarrer la session et enregistrer l'emp_id dans la variable de session
+        $row = $result->fetch_assoc();
+        $_SESSION['user_id'] = $row['emp_id'];
+        header("Location: accueil.php"); // Rediriger vers la page d'accueil
         exit();
-      } else {
+    } else {
         // Identifiants incorrects
         echo "Identifiants incorrects.";
-      }
-
-      // Fermer la connexion à la base de données
-      $stmt->close();
-      $conn->close();
     }
-    ?>
+
+    // Fermer la connexion à la base de données
+    $stmt->close();
+    $conn->close();
+}
+?>
+
+
 
     <div class="form-container sign-in-container">
       <form method="POST" action="<?php echo $_SERVER["PHP_SELF"]; ?>">

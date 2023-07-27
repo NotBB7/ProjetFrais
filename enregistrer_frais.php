@@ -44,7 +44,7 @@ $date_payement = mysqli_real_escape_string($connexion, $date_payement);
 $destination = mysqli_real_escape_string($connexion, $destination);
 
 // Insérer les données dans la table des frais
-$requete = "INSERT INTO expense_report (typ_id, exp_amount_ht, exp_amount_ttc, exp_description, exp_date, exp_proof) 
+$requete = "INSERT INTO expense_report (typ_id, exp_amount_ht, exp_amount_ttc, exp_description, exp_date, exp_proof, emp_id) 
             VALUES ('$type', '$montantHT', '$montantTTC', '$motif', '$date_payement', '$destination')";
 
 // Exécution de la requête

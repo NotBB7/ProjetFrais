@@ -1,3 +1,14 @@
+<?php
+session_start();
+
+?>
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,7 +17,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Bienvenue sur la page d'accueil</h1>
+    <h1>Bienvenue sur la page d'accueeeil</h1>
     <div class="buttons">
       <a href="login-admin.php" class="admin-button">Admin</a>
       <a href="formulaire.php" class="form-button">Formulaire</a>
