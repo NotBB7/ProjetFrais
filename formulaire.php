@@ -5,14 +5,13 @@
   <title>Formulaire de frais</title>
   <link rel="stylesheet" href="formulaire.css">
 </head>
-
 <body>
   <h1>Formulaire de frais</h1>
 
   <?php
-  // Vérifier si le formulaire a été soumis
-  if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    var_dump($_POST);
+session_start();
+// Vérifier si le formulaire a été soumis
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Récupérer les données du formulaire
     $typeFrais = $_POST["type_frais"];
     $montant_paiement = $_POST["montant_paiement"];
@@ -21,58 +20,61 @@
     $montant_final = $_POST['montant_final'];
     $justificatif = $_POST['justificatif'];
 
+
+
+
     // Valider et enregistrer les données dans la base de données
-    if (!empty($typeFrais) && !empty($montant)) {
-      // Connexion à la base de données
-      $servername = "localhost";
-      $username = "root";
-      $password = "1234";
-      $dbname = "projeta";
+    if (!empty($typeFrais) && !empty($montant_paiement)) {
+        // Connexion à la base de données
+        $servername = "localhost";
+        $username = "root";
+        $password = "1234";
+        $dbname = "projeta";
 
-      // Créer une connexion
-      $conn = new mysqli($servername, $username, $password, $dbname);
+        // Créer une connexion
+        $conn = new mysqli($servername, $username, $password, $dbname);
 
-      // Vérifier la connexion
-      if ($conn->connect_error) {
-        die("Erreur de connexion à la base de données : " . $conn->connect_error);
-      }
-
-      // Validation du fichier joint (image ou PDF)
-      if ($_FILES['justificatif']['error'] === UPLOAD_ERR_OK) {
-        $allowedFileTypes = '/\.(jpg|jpeg|png|gif|pdf)$/i';
-        $uploadedFileType = $_FILES['justificatif']['type'];
-
-        if (!preg_match($allowedFileTypes, $uploadedFileType)) {
-          die("Le type de fichier n'est pas autorisé. Seules les images (JPG, JPEG, PNG, GIF) et les fichiers PDF sont acceptés.");
+        // Vérifier la connexion
+        if ($conn->connect_error) {
+            die("Erreur de connexion à la base de données : " . $conn->connect_error);
         }
 
-        // Déplacer le fichier vers le dossier de destination souhaité
-        $destination = 'chemin/vers/dossier_destination/' . $_FILES['justificatif']['name'];
-        move_uploaded_file($_FILES['justificatif']['tmp_name'], $destination);
-      }
+        // Validation du fichier joint (image ou PDF)
+        if ($_FILES['justificatif']['error'] === UPLOAD_ERR_OK) {
+            $allowedFileTypes = '/\.(jpg|jpeg|png|gif|pdf)$/i';
+            $uploadedFileType = $_FILES['justificatif']['type'];
 
+            if (!preg_match($allowedFileTypes, $uploadedFileType)) {
+                die("Le type de fichier n'est pas autorisé. Seules les images (JPG, JPEG, PNG, GIF) et les fichiers PDF sont acceptés.");
+            }
 
+            // Déplacer le fichier vers le dossier de destination souhaité
+            $destination = 'chemin/vers/dossier_destination/' . $_FILES['justificatif']['name'];
+            move_uploaded_file($_FILES['justificatif']['tmp_name'], $destination);
+        }
 
+        // Préparer et exécuter la requête SQL pour insérer les données avec le type ID récupéré
+        $stmt = $conn->prepare("INSERT INTO expense_report (typ_id, exp_amount_ht, exp_description, exp_date, exp_amount_ttc, exp_proof, emp_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssssss", $typeFrais, $montant_paiement, $motif, $date_paiement, $montant_final, $justificatif, $_SESSION['user_id']);
 
-      // Préparer et exécuter la requête SQL pour insérer les données avec le type ID récupéré
-      $sql = "INSERT INTO expense_report (typ_id, exp_amount_ht, exp_description, exp_date, exp_amount_ttc, exp_proof) VALUES ('$type_frais', '$montant_paiement', '$motif', '$date_paiement', '$montant_final' , '$justificatif')";
+        if ($stmt->execute()) {
+            echo "Les frais ont été enregistrés avec succès.";
+        } else {
+            echo "Erreur lors de l'enregistrement des frais : " . $stmt->error;
+        }
 
-      if ($conn->query($sql) === TRUE) {
-        echo "Les frais ont été enregistrés avec succès.";
-      } else {
-        echo "Erreur lors de l'enregistrement des frais : " . $conn->error;
-      }
+        // Fermer la statement
+        $stmt->close();
+        // Fermer la connexion à la base de données
+        $conn->close();
     } else {
-      echo "Type de frais invalide.";
+        echo "Type de frais ou montant invalide.";
     }
-
-    // Fermer la connexion à la base de données
-    $conn->close();
-  } else {
+} else {
     echo "Veuillez remplir tous les champs du formulaire.";
-  }
+}
+?>
 
-  ?>
 
   <form method="post" action="<?php echo $_SERVER["PHP_SELF"]; ?>">
     <label for="type_frais">Type de frais :</label>
@@ -93,10 +95,11 @@
     <label for="montant_paiement">Montant du paiement HT :</label>
     <input type="text" name="montant_paiement" id="montant_paiement" onkeyup="calculerTVA()"><br><br>
 
-    <label for="montant_tva">Montant de la TVA :</label><span id="montant_tva"></span><br><br>
+    <label for="montant_final">Montant de la TVA :</label>
+    <input type="text" id="montant_tva" disabled><br><br>
 
     <label for="montant_final">Montant final TTC :</label>
-    <span  name="montant_final" id="montant_final"></span><br><br>
+    <input type="text" id="montant_final" name="montant_final" > <br><br>
 
     <label for="justificatif" style="justify-content: center;">Justificatif :</label>
     <input type="file" name="justificatif" id="justificatif"><br>
@@ -106,24 +109,26 @@
 
 
   <script>
-    function calculerTVA() {
-      var typeFrais = document.getElementById('type_frais').value;
-      var montantPaiement = parseFloat(document.getElementById('montant_paiement').value);
-      var tva = 0;
-      var montantFinal = 0;
+// Your JavaScript function:
+function calculerTVA() {
+  var typeFrais = document.getElementById('type_frais').value;
+  var montantPaiement = parseFloat(document.getElementById('montant_paiement').value);
+  var tva = 0;
+  var montantFinal = 0;
 
-      if (typeFrais === '4' || typeFrais === '5') {
-        tva = 0.1; // 10% de TVA
-      } else if (typeFrais === '2' || typeFrais === '3' || typeFrais === '1') {
-        tva = 0.2; // 20% de TVA
-      }
+  if (typeFrais === '4' || typeFrais === '5') {
+    tva = 0.1; // 10% de TVA
+  } else if (typeFrais === '2' || typeFrais === '3' || typeFrais === '1') {
+    tva = 0.2; // 20% de TVA
+  }
 
-      var montantTVA = montantPaiement * tva;
-      montantFinal = montantPaiement + montantTVA;
+  var montantTVA = montantPaiement * tva;
+  montantFinal = montantPaiement + montantTVA;
 
-      document.getElementById('montant_tva').textContent = montantTVA.toFixed(2);
-      document.getElementById('montant_final').textContent = montantFinal.toFixed(2);
-    }
+  document.getElementById('montant_tva').value = montantTVA.toFixed(2);
+  document.getElementById('montant_final').value = montantFinal.toFixed(2);
+}
+
   </script>
 
 </body>
